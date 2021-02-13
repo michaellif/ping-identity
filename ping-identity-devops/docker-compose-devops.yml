@@ -41,7 +41,7 @@ services:
     env_file:
       # Configuration file created when setup.sh (Getting-started project root directory) is first run to source
       # devops user/key details for evaluation licenses and for docker image/git tags
-      - ${HOME}/.pingidentity/devops
+      - ./devops
     ports:
       - "443:443"
       - "9000:9000"
@@ -58,7 +58,7 @@ services:
       - SERVER_PROFILE_URL=https://github.com/pingidentity/pingidentity-server-profiles.git
       - SERVER_PROFILE_PATH=baseline/pingdatagovernance
     env_file:
-      - ${HOME}/.pingidentity/devops
+      - ./devops
     ports:
       - "8080:80"
       - "7443:443"
@@ -76,7 +76,7 @@ services:
       - SERVER_PROFILE_URL=https://github.com/pingidentity/pingidentity-server-profiles.git
       - SERVER_PROFILE_PATH=baseline/pingfederate
     env_file:
-      - ${HOME}/.pingidentity/devops
+      - ./devops
     ports:
       - "9031:9031"
       - "9999:9999"
@@ -93,7 +93,7 @@ services:
       - SERVER_PROFILE_URL=https://github.com/pingidentity/pingidentity-server-profiles.git
       - SERVER_PROFILE_PATH=baseline/pingdirectory
     env_file:
-      - ${HOME}/.pingidentity/devops
+      - ./devops
     ulimits:
       nproc:
         soft: 16384
@@ -126,7 +126,7 @@ services:
       - PING_CENTRAL_BLIND_TRUST=true
       - PING_CENTRAL_LOG_LEVEL=DEBUG
     env_file:
-      - ${HOME}/.pingidentity/devops
+      - ./devops
     ports:
       - "9022:9022"
     networks:
@@ -142,7 +142,7 @@ services:
       - SERVER_PROFILE_URL=https://github.com/pingidentity/pingidentity-server-profiles.git
       - SERVER_PROFILE_PATH=baseline/pingdelegator
     env_file:
-      - ${HOME}/.pingidentity/devops
+      - ./devops
     ports:
       - "6443:6443"
     networks:

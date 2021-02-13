@@ -1,0 +1,42 @@
+################################################################################
+#              Ping Identity DevOps Docker Variables
+################################################################################
+# Variables used to assist docker tools and .yaml files during docker
+# container startups.
+################################################################################
+
+PING_IDENTITY_ACCEPT_EULA=YES
+PING_IDENTITY_DEVOPS_USER=michael.lifshits@yorkdigital.ca
+PING_IDENTITY_DEVOPS_KEY=3a740d45-4109-a15f-b01e-c76b63ec17cf
+PING_IDENTITY_DEVOPS_HOME=/home/misha/projects/devops
+PING_IDENTITY_DEVOPS_REGISTRY=docker.io/pingidentity
+PING_IDENTITY_DEVOPS_TAG=edge
+
+################################################################################
+# Hashicorp Vault - If your kubernetes cluster is setup to use a vault from
+#                   Hashicorp, you may optionally provide a URL to that vault
+################################################################################
+
+VAULT_ADDR=https://vault.example.com:8200
+VAULT_CACERT=
+VAULT_SECRET_PREFIX=michael.lifshits@yorkdigital.ca/
+
+################################################################################
+#              Ping Identity DevOps Customized Variables
+################################################################################
+# Additional variables that you would like to send to containers via
+# docker-compose.yaml and kubernetes .yaml files.
+#
+# Examples include:
+#     PING_CONTAINER_PRIVILEGED=false
+#     PING_CONTAINER_UID=12345
+#     PING_CONTAINER_GID=9876
+#     LDAP_PORT=1389
+#     LDAPS_PORT=1636
+#     HTTPS_PORT=1443
+#     JMX_PORT=1689
+#     PING_IDENTITY_PASSWORD=2FederateM0re
+#
+# These are often set to nothing, unless you are using advanced features
+################################################################################
+
