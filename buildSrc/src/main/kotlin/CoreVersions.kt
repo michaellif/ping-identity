@@ -1,0 +1,27 @@
+@file:Suppress("detekt.StringLiteralDuplication")
+
+object CoreVersion {
+    const val APACHE_COMMONS = "1.9"
+    const val ASSERTK_JVM = "0.22"
+    const val GREEN_MAIL = "1.5.10"
+    const val GUAVA = "30.1-jre"
+    const val H2 = "1.4.199"
+    const val JAVA_HAMCREST = "2.0.0.0"
+    const val JAVAFAKER = "1.0.1"
+    const val JAVAX_VALIDATION = "2.0.1.Final"
+    const val JPAMODELGEN = "5.4.10.Final"
+    const val JSONWEBTOKEN = "0.11.2"
+    const val KOTLIN = "1.4.21"
+    const val KUBERNETES = "9.0.0"
+    const val LOGBACK_CONTRIB = "0.1.5"
+    const val LOGBACK_EXTENSIONS = "0.1.5"
+    const val REACTOR_BOM = "Californium-RELEASE"
+    const val REACTOR_KOTLIN_EXTENSIONS = "1.0.2.RELEASE"
+    const val SELENIUM = "3.141.59"
+    const val SPRING_BOOT = "2.4.1"
+    const val SPRING_CLOUD = "Hoxton.SR5"
+    const val SPRING_MOCK = "2.0.8"
+    const val WIREMOCK_JRE8 = "2.27.2"
+    const val CONFLUENT = "6.0.1"
+    const val AVRO = "1.10.1"
+}

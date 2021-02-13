@@ -1,0 +1,226 @@
+steps:
+
+  # ===================== Continuous Integration =====================
+
+  - name: openjdk:11.0-jdk-slim
+    id: Gradle Build
+    entrypoint: "bash"
+    args:
+      - '-c'
+      - |
+        ./gradlew build
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: Docker Build
+    args:
+      - 'build'
+      - '--file'
+      - 'metrofox-monolith/Dockerfile'
+      - '--build-arg'
+      - 'JAR_FILE=metrofox-monolith/build/libs/metrofox-monolith-latest.jar'
+      - '--build-arg'
+      - 'INFO_APP_BUILD=$BUILD_ID'
+      - '--tag'
+      - 'gcr.io/metrofox/metrofox-monolith:$BUILD_ID'
+      - '--tag'
+      - 'gcr.io/metrofox/metrofox-monolith:latest'
+      - '.'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: Docker Push ($BUILD_ID)
+    args:
+      - 'push'
+      - 'gcr.io/metrofox/metrofox-monolith:$BUILD_ID'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: Docker Push (latest)
+    args:
+      - 'push'
+      - 'gcr.io/metrofox/metrofox-monolith:latest'
+
+  # ===================== Create metrofox-staging K8s cluster =====================
+
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: Create metrofox-staging cluster
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gcloud container clusters create metrofox-staging --num-nodes 1 --zone us-central1-a --project metrofox --release-channel regular || echo 'cluster already created'
+
+  # ===================== Continuous Deployment Dev =====================
+
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: Generate Dev manifest
+    entrypoint: /bin/sh
+    args:
+      - '-c'
+      - |
+        mkdir -p build && \
+        sed -e "s/==BUILD_ID==/${BUILD_ID}/g" \
+        -e "s/==SPRING_DATASOURCE_PASSWORD==/$(gcloud secrets versions access latest --secret=spring_datasource_password)/g" \
+        k8s/monolith-app-dev.yaml > ./build/monolith-app-dev.yaml
+
+  - name: 'gcr.io/cloud-builders/kubectl'
+    id: Deploy Dev BE
+    args:
+      - 'apply'
+      - '-f'
+      - './build/monolith-app-dev.yaml'
+    env:
+      - 'CLOUDSDK_COMPUTE_ZONE=us-central1-a'
+      - 'CLOUDSDK_CONTAINER_CLUSTER=metrofox-staging'
+
+  - name: openjdk:11.0-jdk-slim
+    id: Dev Integration Test
+    entrypoint: "bash"
+    args:
+      - '-c'
+      - |
+        ./gradlew integration -Pprofiles=dev
+
+  - name: 'gcr.io/cloud-builders/kubectl'
+    id: Delete Dev BE
+    args:
+      - 'delete'
+      - '--cascade=true'
+      - '--now=true'
+      - 'svc,deployment'
+      - 'metrofox-be-dev'
+    env:
+      - 'CLOUDSDK_COMPUTE_ZONE=us-central1-a'
+      - 'CLOUDSDK_CONTAINER_CLUSTER=metrofox-staging'
+
+  # ===================== Setup Git Access =====================
+
+  - name: gcr.io/cloud-builders/gcloud
+    id: Copy SSH Key
+    entrypoint: 'bash'
+    args: [ '-c', 'gcloud secrets versions access latest --secret=ssh_lucid_works_github > /root/.ssh/id_github' ]
+    volumes:
+      - name: 'ssh'
+        path: /root/.ssh
+
+  - name: 'gcr.io/cloud-builders/git'
+    id: SetUp Git
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        chmod 600 /root/.ssh/id_github
+        cat <<EOF >/root/.ssh/config
+        Hostname github.com
+        IdentityFile /root/.ssh/id_github
+        EOF
+        ssh-keyscan -t rsa github.com > /root/.ssh/known_hosts
+    volumes:
+      - name: 'ssh'
+        path: /root/.ssh
+
+  # ===================== Continuous Deployment QA =====================
+
+  - name: 'gcr.io/cloud-builders/git'
+    id: Git Clone metrofox-staging-env
+    args:
+      - clone
+      - --branch
+      - candidate
+      - git@github.com:lucid-works/metrofox-staging-env.git
+    volumes:
+      - name: 'ssh'
+        path: /root/.ssh
+
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: Generate QA manifest
+    entrypoint: /bin/sh
+    args:
+      - '-c'
+      - |
+        sed -e "s/==BUILD_ID==/${BUILD_ID}/g" \
+        k8s/monolith-app-qa.yaml > metrofox-staging-env/monolith-app-qa.yaml
+
+  - name: 'gcr.io/cloud-builders/git'
+    id: Push QA manifest to metrofox-staging-env
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -x && \
+        cd metrofox-staging-env && \
+        git config user.email $(gcloud auth list --filter=status:ACTIVE --format='value(account)') && \
+        git add monolith-app-qa.yaml && \
+        git commit -m "Deploying image gcr.io/metrofox/metrofox-monolith:${BUILD_ID}
+        Built from commit ${COMMIT_SHA} of repository metrofox-monolith
+        Author: $(git log --format='%an <%ae>' -n 1 HEAD)" && \
+        git push git@github.com:lucid-works/metrofox-staging-env.git candidate
+    volumes:
+      - name: 'ssh'
+        path: /root/.ssh
+
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: Get Test Mail Password
+    entrypoint: /bin/sh
+    args:
+      - '-c'
+      - |
+        gcloud secrets versions access latest --secret=test_mail_password > test_mail_password.env
+
+  - name: openjdk:11.0-jdk-slim
+    id: QA Integration Test
+    entrypoint: "bash"
+    args:
+      - '-c'
+      - |
+        ./gradlew integration -Pprofiles=qa -PimapPassword=$(cat test_mail_password.env)
+
+  # ===================== Continuous Deployment PROD =====================
+
+  - name: 'gcr.io/cloud-builders/git'
+    id: Git Clone metrofox-prod-env
+    args:
+      - clone
+      - --branch
+      - candidate
+      - git@github.com:lucid-works/metrofox-prod-env.git
+    volumes:
+      - name: 'ssh'
+        path: /root/.ssh
+
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: Generate PROD manifest
+    entrypoint: /bin/sh
+    args:
+      - '-c'
+      - |
+        sed -e "s/==BUILD_ID==/${BUILD_ID}/g" \
+        k8s/monolith-app-prod.yaml > metrofox-prod-env/monolith-app-prod.yaml
+
+  - name: 'gcr.io/cloud-builders/git'
+    id: Push PROD manifest to metrofox-prod-env
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -x && \
+        cd metrofox-prod-env && \
+        git config user.email $(gcloud auth list --filter=status:ACTIVE --format='value(account)') && \
+        git add monolith-app-prod.yaml && \
+        git commit -m "Deploying image gcr.io/metrofox/metrofox-monolith:${BUILD_ID}
+        Built from commit ${COMMIT_SHA} of repository metrofox-app
+        Author: $(git log --format='%an <%ae>' -n 1 HEAD)" && \
+        git push git@github.com:lucid-works/metrofox-prod-env.git candidate
+    volumes:
+      - name: 'ssh'
+        path: /root/.ssh
+
+  - name: openjdk:11.0-jdk-slim
+    id: PROD Integration Test
+    entrypoint: "bash"
+    args:
+      - '-c'
+      - |
+        ./gradlew integration -Pprofiles=prod -PimapPassword=$(cat test_mail_password.env)
+
+timeout: 3600s
+options:
+  machineType: E2_HIGHCPU_8

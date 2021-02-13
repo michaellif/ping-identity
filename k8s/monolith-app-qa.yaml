@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metrofox-be-qa
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: metrofox-be-qa
+  template:
+    metadata:
+      labels:
+        app: metrofox-be-qa
+    spec:
+      containers:
+        - name: metrofox-be-qa
+          image: gcr.io/metrofox/metrofox-monolith:==BUILD_ID==
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: qa
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: ==SPRING_DATASOURCE_PASSWORD==
+            - name: SPRING_MAIL_NOREPLY_PASSWORD
+              value: ==SPRING_MAIL_NOREPLY_PASSWORD==
+            - name: SPRING_MAIL_INFO_PASSWORD
+              value: ==SPRING_MAIL_INFO_PASSWORD==
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: metrofox-be-qa
+spec:
+  selector:
+    app: metrofox-be-qa
+  ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 8080
+  type: NodePort
+---
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: metrofox-be-ingress-qa
+  annotations:
+    kubernetes.io/ingress.global-static-ip-name: metrofox-api-qa-ip
+    networking.gke.io/managed-certificates: api-qa.metrofoxsecurity.com
+spec:
+  backend:
+    serviceName: metrofox-be-qa
+    servicePort: 80
+---
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: api-qa.metrofoxsecurity.com
+spec:
+  domains:
+    - api-qa.metrofoxsecurity.com

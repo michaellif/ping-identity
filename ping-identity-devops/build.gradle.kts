@@ -1,0 +1,20 @@
+apply(plugin = "kotlin-spring")
+apply(plugin = "kotlin-jpa")
+apply(plugin = "io.gitlab.arturbosch.detekt")
+
+dependencies {
+    implementation("com.fasterxml.jackson.core:jackson-databind")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    implementation("io.jsonwebtoken:jjwt-api")
+    implementation("io.jsonwebtoken:jjwt-impl")
+    implementation("io.jsonwebtoken:jjwt-jackson")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
+    implementation("org.springframework.boot:spring-boot-starter")
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.cloud:spring-cloud-function-kotlin")
+    implementation("org.springframework.cloud:spring-cloud-starter-function-web")
+    implementation("javax.validation:validation-api")
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
+}
